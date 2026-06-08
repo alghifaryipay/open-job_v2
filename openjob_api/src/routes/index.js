@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
+import path from 'path';
 import users from '../services/users/routes/index.js';
 import authentications from '../services/authentications/routes/index.js';
 import companies from '../services/companies/routes/index.js';
@@ -8,6 +9,8 @@ import applications from '../services/applications/routes/index.js';
 import bookmarks from '../services/bookmarks/routes/index.js';
 
 const router = Router();
+
+router.use('/uploads', express.static(path.resolve('uploads')));
 
 router.use('/', users);
 router.use('/', authentications);

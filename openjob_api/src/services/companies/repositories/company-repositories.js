@@ -1,6 +1,7 @@
 import pkg from 'pg';
 import { Pool } from 'pg';
 import { nanoid } from 'nanoid';
+import redisClient from '../../../utils/redis.js'; // Wajib import redisClient
 
 class CompanyRepositories {
   constructor() {
@@ -32,13 +33,36 @@ class CompanyRepositories {
   }
 
   async getCompanyById(id) {
+    // 1. Cek apakah data ada di cache Redis
+    const cachedCompany = await redisClient.get(`companies:${id}`);
+    
+    if (cachedCompany) {
+      // 2. Jika ada, kembalikan data dari cache beserta flag fromCache = true
+      return {
+        data: JSON.parse(cachedCompany),
+        fromCache: true,
+      };
+    }
+
+    // 3. Jika tidak ada di cache, kueri ke Database
     const query = {
       text: 'SELECT * FROM companies WHERE id = $1',
       values: [id],
     };
 
     const result = await this.pool.query(query);
-    return result.rows[0];
+    const companyData = result.rows[0];
+
+    if (companyData) {
+      // 4. Syarat Advanced: Simpan ke Redis dengan masa berlaku 1 jam (3600 detik)
+      await redisClient.setEx(`companies:${id}`, 3600, JSON.stringify(companyData));
+    }
+
+    // Kembalikan data dari DB dengan flag fromCache = false
+    return {
+      data: companyData,
+      fromCache: false,
+    };
   }
 
   async editCompany({ id, name, description, location }) {
@@ -61,8 +85,6 @@ class CompanyRepositories {
     const result = await this.pool.query(query);
     return result.rows[0];
   }
-
- 
 }
 
 export default new CompanyRepositories();
