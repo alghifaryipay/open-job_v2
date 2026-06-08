@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/application-consumer.js"
+    "start": "node src/consumer.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "amqplib": "^2.0.1",
     "dotenv": "^17.4.2",
