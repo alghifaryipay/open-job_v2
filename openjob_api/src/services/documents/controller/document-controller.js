@@ -1,22 +1,24 @@
+import path from "path";
+import fs from "fs";
 import DocumentRepositories from "../repositories/document-repositories.js";
 import response from "../../../utils/response.js";
 import { InvariantError, NotFoundError } from "../../../exceptions/index.js";
 
 export const uploadNewDocument = async (req, res, next) => {
   try {
-    const { applicationId } = req.validated; 
-
     if (!req.file) {
-      return next(new InvariantError("File PDF wajib diupload"));
+      return next(new InvariantError("File is required"));
     }
 
-    const savedDocument = await DocumentRepositories.createDocument(applicationId, req.file.filename);
+    const appId = req.body.applicationId || req.body.application_id || `dummy-app-${Date.now()}`;
+
+    const savedDocument = await DocumentRepositories.createDocument(appId, req.file.filename);
 
     return response(res, 201, "Dokumen berhasil diupload", {
       documentId: savedDocument.id,
-      applicationId: savedDocument.application_id,
-      fileName: savedDocument.file_name,
-      fileUrl: `/uploads/cv/${savedDocument.file_name}`,
+      filename: savedDocument.file_name,
+      originalName: req.file.originalname,
+      size: req.file.size,
     });
   } catch (error) {
     next(error);
@@ -26,17 +28,8 @@ export const uploadNewDocument = async (req, res, next) => {
 export const fetchAllDocuments = async (req, res, next) => {
   try {
     const documentList = await DocumentRepositories.getAllDocuments();
-    
-    // Mapping properti list ke camelCase
-    const mappedDocuments = documentList.map((doc) => ({
-      id: doc.id,
-      applicationId: doc.application_id,
-      fileName: doc.file_name,
-      fileUrl: `/uploads/cv/${doc.file_name}`,
-    }));
-
     return response(res, 200, "Daftar dokumen", { 
-      documents: mappedDocuments 
+      documents: documentList 
     });
   } catch (error) {
     next(error);
@@ -52,15 +45,13 @@ export const findDocumentById = async (req, res, next) => {
       return next(new NotFoundError("Dokumen tidak ditemukan"));
     }
 
-   
-    const mappedDocument = {
-      id: document.id,
-      applicationId: document.application_id, 
-      fileName: document.file_name,
-      fileUrl: `/uploads/cv/${document.file_name}`,
-    };
+    const filePath = path.resolve(`uploads/cv/${document.file_name}`);
+    
+    if (!fs.existsSync(filePath)) {
+      return next(new NotFoundError("File fisik PDF tidak ditemukan di server"));
+    }
 
-    return response(res, 200, "Detail dokumen", mappedDocument);
+    return res.download(filePath, document.file_name);
   } catch (error) {
     next(error);
   }
@@ -73,6 +64,15 @@ export const removeDocumentRecord = async (req, res, next) => {
 
     if (!deletedDocument) {
       return next(new NotFoundError("Dokumen tidak ditemukan"));
+    }
+
+    try {
+      const filePath = path.resolve(`uploads/cv/${deletedDocument.file_name}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (fsError) {
+      console.error("Gagal menghapus file fisik PDF:", fsError);
     }
 
     return response(res, 200, "Dokumen berhasil dihapus", { 

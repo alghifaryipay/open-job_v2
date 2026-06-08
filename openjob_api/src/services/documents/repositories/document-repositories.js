@@ -6,7 +6,7 @@ class DocumentRepositories {
     this.pool = new Pool();
   }
 
-  async createDocument(applicationId, file_name) {
+  async createDocument(application_id, file_name) {
     const id = nanoid(16);
 
     const query = {
@@ -15,7 +15,7 @@ class DocumentRepositories {
         VALUES ($1, $2, $3)
         RETURNING id, application_id, file_name
       `,
-      values: [id, applicationId, file_name],
+      values: [id, application_id, file_name],
     };
 
     const result = await this.pool.query(query);
