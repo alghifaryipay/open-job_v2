@@ -38,7 +38,6 @@ const init = async () => {
       if (message !== null) {
         const { application_id } = JSON.parse(message.content.toString());
 
-        // Wajib Advanced: Query data lengkap untuk menemukan Job Owner dan Detail Pelamar
         const query = `
           SELECT 
             u_owner.email AS owner_email,
@@ -60,7 +59,7 @@ const init = async () => {
 
           const mailOptions = {
             from: process.env.MAIL_USER,
-            to: data.owner_email, // Dikirim HANYA ke Job Owner
+            to: data.owner_email, 
             subject: 'Notifikasi Lamaran Baru - OpenJob',
             html: `
               <h2>Halo, Ada kandidat baru yang melamar pekerjaan Anda!</h2>

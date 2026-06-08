@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcrypt';
+import redisClient from '../../../utils/redis.js';
 
 class UserRepositories {
   constructor() {
@@ -23,15 +24,33 @@ class UserRepositories {
   }
 
   async getUserById(id) {
+    const cacheKey = `users:${id}`;
+    
+    // Cek Redis Cache
+    const cachedData = await redisClient.get(cacheKey);
+    if (cachedData) {
+      return {
+        fromCache: true,
+        data: JSON.parse(cachedData),
+      };
+    }
+
     const query = {
       text: 'SELECT * FROM users WHERE id = $1',
       values: [id],
     };
-
     
-
     const result = await this.pool.query(query);
-    return result.rows[0];
+    const user = result.rows[0];
+
+    if (user) {
+      await redisClient.setEx(cacheKey, 3600, JSON.stringify(user));
+    }
+
+    return {
+      fromCache: false,
+      data: user,
+    };
   }
 
   async verifyNewEmail(email) {

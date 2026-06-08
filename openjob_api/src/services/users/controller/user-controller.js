@@ -9,9 +9,7 @@ export const registerNewUser = async (req, res, next) => {
   const isEmailExist = await UserRepositories.verifyNewEmail(userEmail);
 
   if (isEmailExist) {
-    return next(
-      new InvariantError('Gagal menambahkan user. Email sudah digunakan.'),
-    );
+    return next(new InvariantError('Gagal menambahkan user. Email sudah digunakan.'));
   }
 
   const userPayload = {
@@ -34,10 +32,16 @@ export const registerNewUser = async (req, res, next) => {
 
 export const findUserDetails = async (req, res, next) => {
   const targetUserId = req.params.id;
-  const userData = await UserRepositories.getUserById(targetUserId);
+  const result = await UserRepositories.getUserById(targetUserId);
+
+  const userData = result?.data || result;
 
   if (!userData) {
     return next(new NotFoundError('User tidak ditemukan.'));
+  }
+
+  if (result?.fromCache) {
+    res.set('X-Data-Source', 'cache');
   }
 
   return response(res, 200, 'User berhasil ditampilkan', {
